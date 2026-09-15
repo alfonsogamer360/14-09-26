@@ -3,23 +3,34 @@ import equipamentoService from '../services/equipamentoService.js'
 
 const equipamentoRouter = Router()
 
-/**
- * GET /equipamentos
- * Lista todos os equipamentos
- */
+const enviarErroInterno = (res) => {
+  return res.status(500).json({ erro: 'Erro interno do servidor' })
+}
+
+const validarDadosEquipamento = (dados) => {
+  if (!dados || typeof dados !== 'object') {
+    return 'Nome e categoria são obrigatórios'
+  }
+
+  const nomeValido = typeof dados.nome === 'string' && dados.nome.trim() !== ''
+  const categoriaValida = typeof dados.categoria === 'string' && dados.categoria.trim() !== ''
+
+  if (!nomeValido || !categoriaValida) {
+    return 'Nome e categoria são obrigatórios'
+  }
+
+  return null
+}
+
 equipamentoRouter.get('/equipamentos', async (req, res) => {
   try {
     const equipamentos = await equipamentoService.listarTodos()
-    res.json(equipamentos)
+    return res.status(200).json(equipamentos)
   } catch (error) {
-    res.status(500).json({ erro: 'Erro ao listar equipamentos' })
+    return enviarErroInterno(res)
   }
 })
 
-/**
- * GET /equipamentos/:id
- * Busca um equipamento específico por ID
- */
 equipamentoRouter.get('/equipamentos/:id', async (req, res) => {
   try {
     const { id } = req.params
@@ -29,42 +40,38 @@ equipamentoRouter.get('/equipamentos/:id', async (req, res) => {
       return res.status(404).json({ erro: 'Equipamento não encontrado' })
     }
 
-    res.json(equipamento)
+    return res.status(200).json(equipamento)
   } catch (error) {
-    res.status(500).json({ erro: 'Erro ao buscar equipamento' })
+    return enviarErroInterno(res)
   }
 })
 
-/**
- * POST /equipamentos
- * Cria um novo equipamento com dados pré-definidos
- */
 equipamentoRouter.post('/equipamentos', async (req, res) => {
   try {
-    const novoEquipamento = await equipamentoService.criar({
-      nome: "Servidor LG Intel Xeon",
-      categoria: "Informática",
-      condicao_uso: "Ruim",
-      disponivel: false
-    })
+    const erroValidacao = validarDadosEquipamento(req.body)
 
-    res.status(201).json(novoEquipamento)
+    if (erroValidacao) {
+      return res.status(400).json({ erro: erroValidacao })
+    }
+
+    const equipamentoCriado = await equipamentoService.criar(req.body)
+    return res.status(201).json(equipamentoCriado)
   } catch (error) {
-    res.status(500).json({ erro: 'Erro ao criar equipamento' })
+    if (error.message === 'Nome e categoria são obrigatórios') {
+      return res.status(400).json({ erro: 'Nome e categoria são obrigatórios' })
+    }
+
+    return enviarErroInterno(res)
   }
 })
 
-/**
- * PATCH /equipamentos/:id/disponibilidade
- * Atualiza apenas a disponibilidade de um equipamento
- */
 equipamentoRouter.patch('/equipamentos/:id/disponibilidade', async (req, res) => {
   try {
     const { id } = req.params
     const { disponivel } = req.body
 
     if (typeof disponivel !== 'boolean') {
-      return res.status(400).json({ erro: 'Disponível deve ser um valor booleano' })
+      return res.status(400).json({ erro: 'Campo disponivel deve ser booleano' })
     }
 
     const equipamento = await equipamentoService.atualizarDisponibilidade(id, disponivel)
@@ -73,16 +80,12 @@ equipamentoRouter.patch('/equipamentos/:id/disponibilidade', async (req, res) =>
       return res.status(404).json({ erro: 'Equipamento não encontrado' })
     }
 
-    res.json(equipamento)
+    return res.status(200).json(equipamento)
   } catch (error) {
-    res.status(500).json({ erro: 'Erro ao atualizar equipamento' })
+    return enviarErroInterno(res)
   }
 })
 
-/**
- * PUT /equipamentos/:id/disponivel
- * Marca equipamento como disponível (sem precisar enviar body)
- */
 equipamentoRouter.put('/equipamentos/:id/disponivel', async (req, res) => {
   try {
     const { id } = req.params
@@ -92,17 +95,12 @@ equipamentoRouter.put('/equipamentos/:id/disponivel', async (req, res) => {
       return res.status(404).json({ erro: 'Equipamento não encontrado' })
     }
 
-    res.json(equipamento)
+    return res.status(200).json(equipamento)
   } catch (error) {
-    console.error('Erro PUT disponivel:', error.message)
-    res.status(500).json({ erro: error.message })
+    return enviarErroInterno(res)
   }
 })
 
-/**
- * PUT /equipamentos/:id/indisponivel
- * Marca equipamento como indisponível (sem precisar enviar body)
- */
 equipamentoRouter.put('/equipamentos/:id/indisponivel', async (req, res) => {
   try {
     const { id } = req.params
@@ -112,10 +110,9 @@ equipamentoRouter.put('/equipamentos/:id/indisponivel', async (req, res) => {
       return res.status(404).json({ erro: 'Equipamento não encontrado' })
     }
 
-    res.json(equipamento)
+    return res.status(200).json(equipamento)
   } catch (error) {
-    console.error('Erro PUT indisponivel:', error.message)
-    res.status(500).json({ erro: error.message })
+    return enviarErroInterno(res)
   }
 })
 
